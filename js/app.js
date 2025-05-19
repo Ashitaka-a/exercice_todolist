@@ -1,98 +1,82 @@
-// js/app.js
-
 let todos = [];
-let currentFilter = 'all'; // Valeur initiale du filtre
+let loginForm = document.getElementById("todoForm"); // récupère l'ID todoForm dans le HTML //
+let todoInput = document.getElementById("title"); // récupère l'ID title dans le HTML //
+let todosContainer = document.querySelector(".list-group"); // récupère la classe list-group du HTML ; TOUJOURS METTRE UN POINT DEVANT LES CLASS AVEC LE QUERY SELECTOR //
 
-const form = document.querySelector('form');
-const input = form.querySelector('input[name="title"]');
-const list = document.querySelector('ul.list-group');
-const filterButtons = document.querySelectorAll('[data-filter]');
+loginForm.addEventListener("submit", function(e){ //on met sur le loginForm un submit pour envoyer le contenu, on met la fonction e et on lui applique en dessous un preventDefault//
+    e.preventDefault();
+    const todoTitle = todoInput.value.trim(); // on récupère la constante créee au dessus et on vérifie qu'il n'y est pas d'espace vide dans le champ //
+    if (todoTitle !== ""){ // si todoTitle est STRICTEMENT vide (avec le "" qui est vide du coup) //
+        const tache = { // on crée une tâche et on lui importe : //
+            id: Date.now(), // récupère la date du jour pour avoir un id unique //
+            title: todoTitle,
+            done: false
+        };
 
-// 🔧 Génère un ID unique
-const generateId = () => Date.now().toString();
+        todos.push(tache); // on ajoute au tableau la tâche qu'on vient de créer //
+        todoInput.value = ""; //quand la tâche est envoyé on remet la valeur a O "" ce qui enlève le texte qui a été mis dans le champ de texte juste avant //
+        updateDisplay();
+    }
+});
 
-// 🔄 Met à jour l'affichage des tâches
-function updateDisplay() {
-    list.innerHTML = '';
-
-    const filteredTodos = todos.filter(todo => {
-        if (currentFilter === 'all') return true;
-        if (currentFilter === 'todo') return !todo.done;
-        if (currentFilter === 'done') return todo.done;
-    });
-
-    filteredTodos.forEach(todo => {
-        const li = document.createElement('li');
-        li.className = 'todo list-group-item d-flex align-items-center justify-content-between';
-
-        const checkWrapper = document.createElement('div');
-        checkWrapper.className = 'form-check';
-
-        const checkbox = document.createElement('input');
-        checkbox.className = 'form-check-input';
-        checkbox.type = 'checkbox';
-        checkbox.checked = todo.done;
-        checkbox.id = `todo-${todo.id}`;
-
-        checkbox.addEventListener('change', () => {
-            todo.done = checkbox.checked;
-            updateDisplay();
-        });
-
-        const label = document.createElement('label');
-        label.className = 'form-check-label ms-2';
-        label.setAttribute('for', `todo-${todo.id}`);
-        label.textContent = todo.title;
-
-        if (todo.done) {
-            label.classList.add('text-decoration-line-through', 'opacity-50');
-        }
-
-        checkWrapper.appendChild(checkbox);
-        checkWrapper.appendChild(label);
-
-        const deleteBtn = document.createElement('button');
-        deleteBtn.className = 'btn btn-danger btn-sm';
-        deleteBtn.setAttribute('aria-label', 'Supprimer');
-        deleteBtn.innerHTML = '<i class="bi-trash"></i>';
-
-        deleteBtn.addEventListener('click', () => {
-            todos = todos.filter(t => t.id !== todo.id);
-            updateDisplay();
-        });
-
-        li.appendChild(checkWrapper);
-        li.appendChild(deleteBtn);
-        list.appendChild(li);
-    });
+function updateDisplay(){
+    todosContainer.innerHTML = null;
+    todos.forEach(function(tache){ //on boucle sur le tableau TODO et on récupère chaques taches du tableau TODO //
+        addTodoToDom(tache) // il va boucler autant de fois que tu as de tâches (la fonction est juste en dessous //
+    }) 
 }
 
-// ➕ Ajouter une nouvelle tâche
-form.addEventListener('submit', event => {
-    event.preventDefault();
-    const title = input.value.trim();
-    if (title === '') return;
+function addTodoToDom(tache){
+    const li = document.createElement("li"); // on crée une balise li qui n'est pas injécté et on va lui donner du HTML par la suite //
+    li.className = "todo list-group-item d-flex align-items-center justify-content-between" // le HTML est donné ici //
+    li.innerHTML = `
+    <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="${tache.id}" ${tache.done ? "checked" : ""}> 
+            <label class="form-check-label ms-2" for="${tache.id}">
+                ${tache.title}
+            </label>
+    </div>
+        <button class="btn btn-danger btn-sm" aria-label="Supprimer">
+            <i class="bi-trash"></i>
+        </button>`
 
-    const newTodo = {
-        id: generateId(),
-        title: title,
-        done: false
-    };
+        const checkboxInput = li.querySelector("input[type=checkbox]"); // récupère un champ HTML directement sans spécifier de classe directement avec des points //
+        checkboxInput.addEventListener("click", function(){ // function sans rien dans les parenthèses = fonction autonome //
+            setCheckedTodo(tache.id); // on appelle une fonction qui va s'occuper de mettre toute 
 
-    todos.push(newTodo);
-    input.value = '';
-    updateDisplay();
-});
+        });
+        if (tache.done === true){
+            li.classList.add("opacity-50");
+            li.querySelector("label").classList.add("text-decoration-line-through")
+        }
 
-// 🎛 Gérer les filtres
-filterButtons.forEach(button => {
-    button.addEventListener('click', () => {
-        filterButtons.forEach(btn => btn.classList.remove('active'));
-        button.classList.add('active');
-        currentFilter = button.dataset.filter;
-        updateDisplay();
+        const deleteBtn = li.querySelector(".btn-danger");
+        deleteBtn.addEventListener("click", function(){
+            deleteTodo(tache.id);
+        });
+
+    todosContainer.prepend(li); // prepend permet d'ajouter le 'li' avant, donc on le voit en haut de la liste sur la page web //
+}
+    
+function setCheckedTodo(id){ // on gère dans cette fonction la case à cocher //
+    let todo = todos.find(function(todo){
+        return todo.id === id; //stop la ligne si elle trouve une tâche avec un id identique avec celui qu'on vient de cocher// 
     });
-});
 
-// Initialisation de l'affichage (optionnel si todos est vide)
-updateDisplay();
+    if (todo){
+        if (todo.done === true){ // quand on arrive pour savoir si la tâche est effectué ou non on inverse l'état coché //
+            todo.done = false;
+        } else {
+            todo.done = true;
+        }
+    }
+    updateDisplay(); // on appelle la fonction qui met à jour l'affichage //
+}
+
+function deleteTodo(id){
+    todos = todos.filter(function(todo){
+        return todo.id !== id; 
+    });
+    
+    updateDisplay();
+}
